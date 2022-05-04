@@ -5,21 +5,40 @@
 
 <PageTile>Index</PageTile>
 
+@*
+    Campo para introducir el nombre de usuario.
+*@
+
 <div class="form-group">
     <label>
         User:
         <input @bind="userInput" />
     </label>
 </div>
+
+@*
+    Campo para introducir el mensaje.
+*@
+
 <div class="form-group">
     <label>
         Message:
         <input @bind="messageInput" size="50" />
     </label>
 </div>
+
+@*
+    Botón para enviar el mensaje al chat.
+    Cuando se pulsa el botón, se ejecuta el método "Send".
+*@
+
 <button @onclick="Send" disabled="@(!IsConnected)">Send</button>
 
 <hr>
+
+@*
+    Chat: lista de mensajes enviados.
+*@
 
 <ul id="messagesList">
     @foreach (var message in messages)
@@ -34,6 +53,12 @@
     private string? userInput;
     private string? messageInput;
 
+    @*
+        Método encargado de establecer la conexión entre dos o más ventanas,
+        compartiendo la misma dirección URL.
+        Los mensajes recibidos se insertan en la lista "messages".
+    *@
+
     protected override async Task OnInitializedAsync()
     {
         hubConnection = new HubConnectionBuilder()
@@ -45,6 +70,36 @@
             var encodedMsg = $"{user}: {message}";
             messages.Add(encodedMsg);
             InvokeAsync(StateHasChanged);
-        })
+        });
+
+        await hubConnection.StartAsync();
+    }
+
+    @*
+        Método "Send".
+        Se encarga de enviar el contenido insertado por el usuario a la lista.
+    *@
+
+    private async Task Send()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.SendAsync("SendMessage", userInput, messageInput);
+        }
+    }
+
+    @*
+        La variable "IsConnected" contiene el estado de la conexión.
+    *@
+
+    public bool IsConnected =>
+        hubConnection?.State == HubConnectionState.Connected;
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
     }
 }
